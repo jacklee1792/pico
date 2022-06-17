@@ -256,16 +256,37 @@ impl Position {
         m: &masks::Lookup,
         t: &tables::Lookup,
     ) -> Vec<Move> {
-        [
+        let mut ret: Vec<Move> = Vec::new();
+
+        for mov in [
             self.gen_rook_moves(from, m, t),
             self.gen_bishop_moves(from, m, t),
         ]
         .concat()
+        {
+            let to = move_get_to(mov);
+            if (self.side_bitboards[self.side as usize ^ 1] & (1 << to)) > 0 {
+                ret.push(make_move(from, to, FLAG_CAPTURE));
+            } else {
+                ret.push(make_move(from, to, FLAG_QUIET_MOVE));
+            }
+        }
+        ret
     }
 
     pub fn gen_rook_moves(&self, from: Square, m: &masks::Lookup, t: &tables::Lookup) -> Vec<Move> {
         let hash = t.rmag[from as usize].transform(self.all_bitboard & m.rrel[from as usize]);
-        self.gen_from_atk(from, t.rmag_tbl[from as usize][hash as usize])
+
+        let mut ret: Vec<Move> = Vec::new();
+        for mov in self.gen_from_atk(from, t.rmag_tbl[from as usize][hash as usize]) {
+            let to = move_get_to(mov);
+            if (self.side_bitboards[self.side as usize ^ 1] & (1 << to)) > 0 {
+                ret.push(make_move(from, to, FLAG_CAPTURE));
+            } else {
+                ret.push(make_move(from, to, FLAG_QUIET_MOVE));
+            }
+        }
+        ret
     }
 
     pub fn gen_bishop_moves(
@@ -275,7 +296,16 @@ impl Position {
         t: &tables::Lookup,
     ) -> Vec<Move> {
         let hash = t.bmag[from as usize].transform(self.all_bitboard & m.brel[from as usize]);
-        self.gen_from_atk(from, t.bmag_tbl[from as usize][hash as usize])
+        let mut ret: Vec<Move> = Vec::new();
+        for mov in self.gen_from_atk(from, t.bmag_tbl[from as usize][hash as usize]) {
+            let to = move_get_to(mov);
+            if (self.side_bitboards[self.side as usize ^ 1] & (1 << to)) > 0 {
+                ret.push(make_move(from, to, FLAG_CAPTURE));
+            } else {
+                ret.push(make_move(from, to, FLAG_QUIET_MOVE));
+            }
+        }
+        ret
     }
 
     pub fn gen_knight_moves(&self, from: Square, m: &masks::Lookup) -> Vec<Move> {
