@@ -204,7 +204,15 @@ impl Position {
     }
 
     pub fn gen_king_moves(&self, from: Square, m: &masks::Lookup) -> Vec<Move> {
-        let mut ret = self.gen_from_atk(from, m.king[from as usize]);
+        let mut ret: Vec<Move> = Vec::new();
+        for mov in self.gen_from_atk(from, m.king[from as usize]) {
+            let to = move_get_to(mov);
+            if (self.side_bitboards[self.side as usize ^ 1] & (1 << to)) > 0 {
+                ret.push(make_move(from, to, FLAG_CAPTURE));
+            } else {
+                ret.push(make_move(from, to, FLAG_QUIET_MOVE));
+            }
+        }
         match self.side {
             enums::Colour::White => {
                 if self.castling & WKING_CASTLE_RIGHTS != 0
